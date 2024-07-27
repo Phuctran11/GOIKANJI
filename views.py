@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 import random
 from flask import Blueprint, flash, jsonify, render_template, request, redirect, url_for
 from flask_login import login_required, current_user
-from .models import UserProgress, Lesson, Vocabulary, Question, Comment, Kanji
+from .models import Todo, UserProgress, Lesson, Vocabulary, Question, Comment, Kanji
 from . import db
 
 views = Blueprint('views', __name__)
@@ -10,7 +10,35 @@ views = Blueprint('views', __name__)
 @views.route('/', methods=['GET', 'POST'])
 @login_required
 def home():
-    return render_template("home.html", user=current_user)
+    if request.method == 'POST':
+        todo_title = request.form.get('todo_title')
+        if todo_title:
+            new_todo = Todo(title=todo_title, user_id=current_user.id)
+            db.session.add(new_todo)
+            db.session.commit()
+            return redirect(url_for('views.home'))
+
+    todos = Todo.query.filter_by(user_id=current_user.id).all()
+    return render_template("home.html", todos=todos, user=current_user)
+
+@views.route('/toggle_todo/<int:todo_id>/', methods=['POST'])
+@login_required
+def toggle_todo(todo_id):
+    todo = Todo.query.get(todo_id)
+    if todo and todo.user_id == current_user.id:
+        todo.completed = not todo.completed
+        db.session.commit()
+    return '', 204  # Trả về mã trạng thái 204 No Content
+
+@views.route('/delete_todo/<int:todo_id>/', methods=['POST'])
+@login_required
+def delete_todo(todo_id):
+    todo = Todo.query.get(todo_id)
+    if todo and todo.user_id == current_user.id:
+        db.session.delete(todo)
+        db.session.commit()
+    return '', 204  # Trả về mã trạng thái 204 No Content
+
 
 @views.route('/tuvung-<level>', methods=['GET'])
 @login_required
@@ -140,7 +168,7 @@ def submit_test():
     # Cập nhật hoặc tạo mới tiến trình học tập
     if user_progress:
         user_progress.times_reviewed += 1
-        user_progress.next_review = current_time + timedelta(minutes=user_progress.times_reviewed * 2)
+        user_progress.next_review = current_time + timedelta(minutes=user_progress.times_reviewed * 10)
     else:
         user_progress = UserProgress(
             id=current_user.id,
@@ -190,6 +218,9 @@ def update_progress(user_id):
     for progress in user_progresses:
         if current_time >= progress.next_review:
             notifications.append(f"{current_time.strftime('%Y-%m-%d %H:%M:%S')}: It's time to review lesson {progress.lesson_id}.")
-
+            progress.next_review = current_time + timedelta(minutes=progress.times_reviewed * 10)
     db.session.commit()
     return jsonify({"status": "success", "notifications": notifications})
+
+
+
