@@ -1,226 +1,125 @@
-from datetime import datetime, timedelta
-import random
-from flask import Blueprint, flash, jsonify, render_template, request, redirect, url_for
-from flask_login import login_required, current_user
-from .models import Todo, UserProgress, Lesson, Vocabulary, Question, Comment, Kanji
-from . import db
+{% extends "base.html" %}
 
-views = Blueprint('views', __name__)
+{% block title %}Home{% endblock %}
 
-@views.route('/', methods=['GET', 'POST'])
-@login_required
-def home():
-    if request.method == 'POST':
-        todo_title = request.form.get('todo_title')
-        if todo_title:
-            new_todo = Todo(title=todo_title, user_id=current_user.id)
-            db.session.add(new_todo)
-            db.session.commit()
-            return redirect(url_for('views.home'))
-
-    todos = Todo.query.filter_by(user_id=current_user.id).all()
-    return render_template("home.html", todos=todos, user=current_user)
-
-@views.route('/toggle_todo/<int:todo_id>/', methods=['POST'])
-@login_required
-def toggle_todo(todo_id):
-    todo = Todo.query.get(todo_id)
-    if todo and todo.user_id == current_user.id:
-        todo.completed = not todo.completed
-        db.session.commit()
-    return '', 204  # Trả về mã trạng thái 204 No Content
-
-@views.route('/delete_todo/<int:todo_id>/', methods=['POST'])
-@login_required
-def delete_todo(todo_id):
-    todo = Todo.query.get(todo_id)
-    if todo and todo.user_id == current_user.id:
-        db.session.delete(todo)
-        db.session.commit()
-    return '', 204  # Trả về mã trạng thái 204 No Content
-
-
-@views.route('/tuvung-<level>', methods=['GET'])
-@login_required
-def vocabulary_by_level(level):
-    level_map = {
-        'n1': 1,
-        'n2': 2,
-        'n3': 3,
-        'n4': 4,
-        'n5': 5
+{% block content %}
+<style>
+    body {
+        background-color: #6ecb87; /* Màu nền cho toàn bộ trang */
     }
-    level_id = level_map.get(level.lower())
-    if level_id is None:
-        return redirect(url_for('views.home'))
-    lessons = Lesson.query.filter_by(level_id=level_id).all()
-    return render_template('vocabulary_list.html', lessons=lessons, level=level)
-
-@views.route('/kanji-<level>', methods=['GET'])
-@login_required
-def kanji_by_level(level):
-    level_map = {
-        'n1': 11,
-        'n2': 12,
-        'n3': 13,
-        'n4': 14,
-        'n5': 15
+    .header {
+        text-align: center;
+        margin: 20px 0;
     }
-    level_id = level_map.get(level.lower())
-    if level_id is None:
-        return redirect(url_for('views.home'))
-    lessons = Lesson.query.filter_by(level_id=level_id).all()
-    return render_template('kanji_list.html', lessons=lessons, level=level)
+    .header h1 {
+        font-size: 36px;
+        font-weight: bold;
+        color: #000000;
+        text-shadow: 5px 5px 7px rgba(214, 14, 14, 0.1);
+        animation: bounce 2.5s infinite; /* Thêm hiệu ứng nhảy nhót */
+        transition: transform 0.3s, color 0.3s;
+    }
+    .header h1:hover {
+        transform: scale(1.05);
+        color: #c51313; /* Màu khi hover */
+    }
 
-@views.route('/lesson/<int:lesson_id>/learn', methods=['GET', 'POST'])
-@login_required
-def lesson_vocabulary(lesson_id):
-    lesson = Lesson.query.get_or_404(lesson_id)
-    vocabulary_list = Vocabulary.query.filter_by(lesson_id=lesson_id).all()
-    total_vocabularies = len(vocabulary_list)
-    current_index = int(request.form.get('index', 0))
+    /* Định nghĩa animation nhảy nhót */
+    @keyframes bounce {
+        0%, 20%, 50%, 80%, 100% {
+            transform: translateY(0);
+        }
+        40% {
+            transform: translateY(-10px);
+        }
+        60% {
+            transform: translateY(-10px);
+        }
+    }
 
-    if request.method == 'POST':
-        action = request.form.get('action')
-        if action == 'next' and current_index < total_vocabularies - 1:
-            current_index += 1
-        elif action == 'prev' and current_index > 0:
-            current_index -= 1
-        elif action == 'add_comment':
-            comment_content = request.form.get('comment_content')
-            if comment_content:
-                new_comment = Comment(
-                    word_id=vocabulary_list[current_index].vocab_id,
-                    id=current_user.id,
-                    content=comment_content
-                )
-                db.session.add(new_comment)
-                db.session.commit()
-                return redirect(url_for('views.lesson_vocabulary', lesson_id=lesson_id, index=current_index))
+    .todo-container {
+        margin-top: 20px;
+        background-color: #c66a0e;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    .todo-title {
+        font-size: 24px;
+        font-weight: bold;
+        margin-bottom: 20px;
+        text-align: center;
+    }
+    .list-group-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px;
+        margin-bottom: 10px;
+        border-radius: 5px;
+        background-color: #ffffff;
+        transition: background-color 0.3s;
+    }
+    .list-group-item:hover {
+        background-color: #44e903;
+    }
+    .btn-danger {
+        margin-left: 10px;
+    }
+    .form-control {
+        border-radius: 5px;
+    }
+    .btn-primary {
+        border-radius: 5px;
+    }
+</style>
 
-    current_vocabulary = vocabulary_list[current_index] if total_vocabularies > 0 else None
-    comments = Comment.query.filter_by(word_id=current_vocabulary.vocab_id).all() if current_vocabulary else []
+<div class="header">
+    <h1>Kanji - Goi Learning App</h1>
+</div>
 
-    return render_template('lesson_vocabulary.html',
-                           lesson=lesson,
-                           current_vocabulary=current_vocabulary,
-                           current_index=current_index,
-                           total_vocabularies=total_vocabularies,
-                           comments=comments)
+<div class="container todo-container">
+    <!-- Form để thêm todo -->
+    <form method="POST" class="mt-4">
+        <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+        <div class="input-group">
+            <input type="text" name="todo_title" id="todo_title" class="form-control" placeholder="Add a new todo" required />
+            <div class="input-group-append">
+                <button type="submit" class="btn btn-primary">Add Todo</button>
+            </div>
+        </div>
+    </form>
 
-@views.route('/kanjilesson/<int:lesson_id>/learn', methods=['GET', 'POST'])
-@login_required
-def lesson_kanji(lesson_id):
-    lesson = Lesson.query.get_or_404(lesson_id)
-    kanji_list = Kanji.query.filter_by(lesson_id=lesson_id).all()
-    total_kanji = len(kanji_list)
-    current_index = int(request.form.get('index', 0))
+    <h2 class="mt-4 text-center">Your Todo List</h2>
+    <ul class="list-group">
+        {% for todo in todos %}
+            <li class="list-group-item">
+                <div>
+                    <input type="checkbox" {% if todo.completed %}checked{% endif %} onclick="toggleTodo({{ todo.todo_id }})">
+                    {{ todo.title }}
+                </div>
+                <button onclick="deleteTodo({{ todo.todo_id }})" class="btn btn-danger btn-sm">Delete</button>
+            </li>
+        {% else %}
+            <li class="list-group-item">No todos found.</li>
+        {% endfor %}
+    </ul>
+</div>
 
-    if request.method == 'POST':
-        action = request.form.get('action')
-        if action == 'next' and current_index < total_kanji - 1:
-            current_index += 1
-        elif action == 'prev' and current_index > 0:
-            current_index -= 1
-        elif action == 'add_comment':
-            comment_content = request.form.get('comment_content')
-            if comment_content:
-                new_comment = Comment(
-                    kanji_id=kanji_list[current_index].kanji_id,
-                    id=current_user.id,
-                    content=comment_content
-                )
-                db.session.add(new_comment)
-                db.session.commit()
-                return redirect(url_for('views.lesson_kanji', lesson_id=lesson_id, index=current_index))
+<script>
+function toggleTodo(todoId) {
+    fetch(`/toggle_todo/${todoId}/`, { 
+        method: 'POST', 
+        headers: { 'X-CSRFToken': '{{ csrf_token }}' } 
+    });
+}
 
-    current_kanji = kanji_list[current_index] if total_kanji > 0 else None
-    comments = Comment.query.filter_by(kanji_id=current_kanji.kanji_id).all() if current_kanji else []
-
-    return render_template('lesson_kanji.html',
-                           lesson=lesson,
-                           current_kanji=current_kanji,
-                           current_index=current_index,
-                           total_kanji=total_kanji,
-                           comments=comments)
-
-@views.route('/lesson/<int:lesson_id>/test', methods=['GET'])
-@login_required
-def take_test(lesson_id):
-    # Lấy tất cả câu hỏi cho bài học cụ thể
-    questions = Question.query.filter_by(lesson_id=lesson_id).all()
-    
-    # Đảo ngẫu nhiên thứ tự câu hỏi
-    random.shuffle(questions)
-    
-    # Render trang kiểm tra với danh sách câu hỏi
-    return render_template('test.html', questions=questions, lesson_id=lesson_id)
-
-@views.route('/submit_test', methods=['POST'])
-@login_required
-def submit_test():
-    lesson_id = request.form.get('lesson_id')
-    current_time = datetime.now()
-
-    # Tìm kiếm tiến trình học tập của người dùng
-    user_progress = UserProgress.query.filter_by(id=current_user.id, lesson_id=lesson_id).first()
-
-    # Cập nhật hoặc tạo mới tiến trình học tập
-    if user_progress:
-        user_progress.times_reviewed += 1
-        user_progress.next_review = current_time + timedelta(minutes=user_progress.times_reviewed * 10)
-    else:
-        user_progress = UserProgress(
-            id=current_user.id,
-            lesson_id=lesson_id,
-            times_reviewed=1,
-            next_review=current_time + timedelta(minutes=1)
-        )
-        db.session.add(user_progress)
-
-    db.session.commit()
-
-    # Đếm số câu đúng
-    correct_answers = sum(
-        1 for question in Question.query.filter_by(lesson_id=lesson_id).all()
-        if request.form.get(f'question_{question.question_id}') == question.correct_answer
-    )
-    
-    total_questions = Question.query.filter_by(lesson_id=lesson_id).count()
-
-    # Tính điểm
-    score = f"{correct_answers}/{total_questions}"
-    
-    # Tính tỷ lệ phần trăm
-    percentage = (correct_answers / total_questions) * 100 if total_questions > 0 else 0
-
-    # Gửi thông báo cho người dùng
-    message = ''
-    if percentage >= 80:
-        message = f'Wonderful! You passed the exam. Your score: {score}.'
-    else:
-        message = f'Bro! You\'re stupid. Your score: {score}.'
-    
-    flash(message, 'success' if percentage >= 80 else 'danger')
-
-    # Chuyển hướng về trang chủ
-    return redirect(url_for('views.home'))
-
-
-
-@views.route('/update_progress/<int:user_id>', methods=['POST'])
-@login_required
-def update_progress(user_id):
-    current_time = datetime.now()
-    user_progresses = UserProgress.query.filter_by(id=user_id).all()
-    notifications = []
-
-    for progress in user_progresses:
-        if current_time >= progress.next_review:
-            notifications.append(f"{current_time.strftime('%Y-%m-%d %H:%M:%S')}: It's time to review lesson {progress.lesson_id}.")
-            progress.next_review = current_time + timedelta(minutes=progress.times_reviewed * 10)
-    db.session.commit()
-    return jsonify({"status": "success", "notifications": notifications})
-
-
-
+function deleteTodo(todoId) {
+    fetch(`/delete_todo/${todoId}/`, { 
+        method: 'POST', 
+        headers: { 'X-CSRFToken': '{{ csrf_token }}' } 
+    })
+    .then(() => location.reload());
+}
+</script>
+{% endblock %}
