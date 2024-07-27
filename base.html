@@ -41,8 +41,8 @@
 
       .notification-dot {
           position: absolute;
-          top: -5px;
-          right: -10px;
+          top: 3px;
+          right: 3px;
           background-color: red;
           border-radius: 50%;
           width: 10px;
@@ -55,13 +55,13 @@
           position: absolute;
           top: 2rem;
           right: 0;
-          background-color: white;
-          border: 1px solid #ccc;
+          background-color: rgb(243, 231, 231);
+          border: 1px solid #424040;
           padding: 10px;
-          width: 400px;
+          width: 415px;
           max-height: 200px;
           overflow-y: auto;
-          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+          box-shadow: 0 4px 8px rgba(173, 21, 21, 0.1);
           z-index: 1000;
       }
 
@@ -143,6 +143,7 @@
       </button>
     </div>
     {% endif %} {% endfor %} {% endif %} {% endwith %}
+
     <!-- chuông thông báo -->
     <div class="notification-container" id="notification-container">
       <div class="notification-bell" onclick="toggleNotifications()">
@@ -206,8 +207,8 @@
   
                       // Giới hạn số lượng thông báo lưu trữ
                       const currentUserNotifications = notifications.find(n => n[0] === userId)[1];
-                      if (currentUserNotifications.length > 30) {
-                          currentUserNotifications.splice(0, currentUserNotifications.length - 30); // Giữ lại 30 thông báo mới nhất
+                      if (currentUserNotifications.length > 50) {
+                          currentUserNotifications.splice(currentUserNotifications.length - 50, currentUserNotifications.length ); 
                       }
   
                       // Hiện chấm đỏ nếu có thông báo mới cho user hiện tại
@@ -216,15 +217,22 @@
                       } else {
                           document.getElementById('notification-dot').style.display = 'none'; // Ẩn chấm đỏ nếu không có thông báo mới
                       }
+
+                      if (newNotifications.length > 0 && userNotifications) {
+                        const audio = new Audio('https://www.soundjay.com/button/beep-07.wav'); 
+audio.play();
+
+}
+
   
                       localStorage.setItem('notifications', JSON.stringify(notifications));
-                      displayNotifications(userId); // Hiện thông báo cho người dùng đã chọn
+                      displayNotifications(userId); 
                   }
               })
               .catch(error => console.error('Error fetching notifications:', error));
       }
   
-      function displayNotifications(userId) {
+      function displayNotifications(userId) { // Hiện thông báo cho người dùng đã chọn
           const notificationList = document.getElementById('notification-list');
           notificationList.innerHTML = '';
   
