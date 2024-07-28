@@ -18,69 +18,77 @@
     <title>{% block title %}Home{% endblock %}</title>
     <style>
       .navbar {
-          transition: top 0.3s ease;
+        transition: top 0.3s ease;
       }
 
       .hidden-navbar {
-          top: -60px;
+        top: -60px;
       }
 
       .notification-container {
-          position: fixed;
-          top: 5px;
-          right: 80px;
-          z-index: 1000;
-          transition: opacity 0.3s ease;
+        position: fixed;
+        top: 5px;
+        right: 20px;
+        z-index: 1000;
+        transition: opacity 0.3s ease;
       }
 
       .notification-bell {
-          font-size: 2rem;
-          cursor: pointer;
-          position: relative;
+        font-size: 2rem;
+        cursor: pointer;
+        position: relative;
       }
 
       .notification-dot {
-          position: absolute;
-          top: 3px;
-          right: 3px;
-          background-color: red;
-          border-radius: 50%;
-          width: 10px;
-          height: 10px;
-          display: none;
+        position: absolute;
+        top: 7px;
+        right: -5px;
+        background-color: red;
+        border-radius: 50%;
+        width: 10px;
+        height: 10px;
+        display: none;
       }
 
       .notification-list {
-          display: none;
-          position: absolute;
-          top: 2rem;
-          right: 0;
-          background-color: rgb(243, 231, 231);
-          border: 1px solid #424040;
-          padding: 10px;
-          width: 415px;
-          max-height: 200px;
-          overflow-y: auto;
-          box-shadow: 0 4px 8px rgba(173, 21, 21, 0.1);
-          z-index: 1000;
+        display: none;
+        position: absolute;
+        top: 2rem;
+        right: 0;
+        background-color: white;
+        border: 1px solid #ccc;
+        padding: 10px;
+        width: 400px;
+        max-height: 200px;
+        overflow-y: auto;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        z-index: 1000;
       }
 
       .notification-list.active {
-          display: block;
+        display: block;
       }
 
       .notification-item {
-          margin-bottom: 10px;
-          padding: 5px;
-          border-radius: 4px;
-          background-color: #f9f9f9;
-          font-family: 'Arial', sans-serif;
-          color: #333;
+        margin-bottom: 10px;
+        padding: 5px;
+        border-radius: 4px;
+        background-color: #f9f9f9;
+        font-family: 'Arial', sans-serif;
+        color: #333;
       }
-  </style>
+
+      .profile-button {
+        margin-right: 70px;
+      }
+
+      .container-with-navbar {
+        padding-top: 60px;
+      }
+    </style>
   </head>
   <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
       <button
         class="navbar-toggler"
         type="button"
@@ -104,57 +112,56 @@
                 <a class="dropdown-item" href="{{ url_for('views.vocabulary_by_level', level='n4') }}">N4</a>
                 <a class="dropdown-item" href="{{ url_for('views.vocabulary_by_level', level='n5') }}">N5</a>
             </div>
-        </li>
-        <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-              Kanji
-          </a>
-          <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-              <a class="dropdown-item" href="{{ url_for('views.kanji_by_level', level='n1') }}">N1</a>
-              <a class="dropdown-item" href="{{ url_for('views.kanji_by_level', level='n2') }}">N2</a>
-              <a class="dropdown-item" href="{{ url_for('views.kanji_by_level', level='n3') }}">N3</a>
-              <a class="dropdown-item" href="{{ url_for('views.kanji_by_level', level='n4') }}">N4</a>
-              <a class="dropdown-item" href="{{ url_for('views.kanji_by_level', level='n5') }}">N5</a>
-          </div>
-      </li>
+          </li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                Kanji
+            </a>
+            <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                <a class="dropdown-item" href="/kanji-n1">N1</a>
+                <a class="dropdown-item" href="/kanji-n2">N2</a>
+                <a class="dropdown-item" href="/kanji-n3">N3</a>
+                <a class="dropdown-item" href="/kanji-n4">N4</a>
+                <a class="dropdown-item" href="/kanji-n5">N5</a>
+            </div>
+          </li>
           <a class="nav-item nav-link" id="logout" href="/logout">Logout</a>
           {% else %}
           <a class="nav-item nav-link" id="login" href="/login">Login</a>
           <a class="nav-item nav-link" id="signUp" href="/sign-up">Sign Up</a>
           {% endif %}
         </div>
+        {% if current_user.is_authenticated %}
+        <div class="ml-auto">
+          <a class="btn btn-primary profile-button" id="profile" href="{{ url_for('views.profile') }}">Profile</a>
+          <div class="notification-container" id="notification-container">
+            <div class="notification-bell" onclick="toggleNotifications()">
+                🔔
+                <span id="notification-dot" class="notification-dot"></span>
+            </div>
+            <div class="notification-list" id="notification-list">
+                
+            </div>
+        </div>
+        </div>
+        {% endif %}
       </div>
     </nav>
 
-    {% with messages = get_flashed_messages(with_categories=true) %} {% if
-    messages %} {% for category, message in messages %} {% if category ==
-    'error' %}
-    <div class="alert alert-danger alter-dismissable fade show" role="alert">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% for category, message in messages %}
+    <div class="alert alert-{% if category == 'error' %}danger{% else %}success{% endif %} alert-dismissable fade show" role="alert">
       {{ message }}
       <button type="button" class="close" data-dismiss="alert">
         <span aria-hidden="true">&times;</span>
       </button>
     </div>
-    {% else %}
-    <div class="alert alert-success alter-dismissable fade show" role="alert">
-      {{ message }}
-      <button type="button" class="close" data-dismiss="alert">
-        <span aria-hidden="true">&times;</span>
-      </button>
-    </div>
-    {% endif %} {% endfor %} {% endif %} {% endwith %}
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
 
-    <!-- chuông thông báo -->
-    <div class="notification-container" id="notification-container">
-      <div class="notification-bell" onclick="toggleNotifications()">
-          🔔
-          <span id="notification-dot" class="notification-dot"></span>
-      </div>
-      <div class="notification-list" id="notification-list">
-          
-      </div>
-  </div>
-    <div class="container">{% block content %} {% endblock %}</div>
+    <div class="container container-with-navbar">{% block content %} {% endblock %}</div>
     <script
       src="https://code.jquery.com/jquery-3.2.1.slim.min.js"
       integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN"
@@ -162,7 +169,7 @@
     ></script>
     <script
       src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"
-      integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
+      integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7H UibX39j7fakFPskvXusvfa0b4Q"
       crossorigin="anonymous"
     ></script>
     <script
@@ -207,8 +214,8 @@
   
                       // Giới hạn số lượng thông báo lưu trữ
                       const currentUserNotifications = notifications.find(n => n[0] === userId)[1];
-                      if (currentUserNotifications.length > 50) {
-                          currentUserNotifications.splice(currentUserNotifications.length - 50, currentUserNotifications.length ); 
+                      if (currentUserNotifications.length > 30) {
+                          currentUserNotifications.splice(currentUserNotifications.length - 30, currentUserNotifications.length ); // Giữ lại 30 thông báo mới nhất
                       }
   
                       // Hiện chấm đỏ nếu có thông báo mới cho user hiện tại
@@ -217,22 +224,15 @@
                       } else {
                           document.getElementById('notification-dot').style.display = 'none'; // Ẩn chấm đỏ nếu không có thông báo mới
                       }
-
-                      if (newNotifications.length > 0 && userNotifications) {
-                        const audio = new Audio('https://www.soundjay.com/button/beep-07.wav'); 
-audio.play();
-
-}
-
   
                       localStorage.setItem('notifications', JSON.stringify(notifications));
-                      displayNotifications(userId); 
+                      displayNotifications(userId); // Hiện thông báo cho người dùng đã chọn
                   }
               })
               .catch(error => console.error('Error fetching notifications:', error));
       }
   
-      function displayNotifications(userId) { // Hiện thông báo cho người dùng đã chọn
+      function displayNotifications(userId) {
           const notificationList = document.getElementById('notification-list');
           notificationList.innerHTML = '';
   
@@ -253,7 +253,7 @@ audio.play();
           displayNotifications(currentUserId); // Hiện thông báo cho người dùng hiện tại
       };
   
-      setInterval(() => fetchNotifications(currentUserId), 60000); // Cập nhật thông báo mỗi phút
+      setInterval(() => fetchNotifications(currentUserId), 120000); // Cập nhật thông báo sau mỗi 2 phút
   
       // Xử lý sự kiện cuộn trang
       window.addEventListener('scroll', function() {
@@ -273,6 +273,6 @@ audio.play();
   
           lastScrollTop = scrollTop <= 0 ? 0 : scrollTop; // Cập nhật lastScrollTop
       });
-  </script>
-  </body>
+    </script>
+</body>
 </html>
